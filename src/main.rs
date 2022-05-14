@@ -15,7 +15,7 @@ use rustc_lint_defs::impl_lint_pass;
 use rustc_session::declare_tool_lint;
 use std::{process, str};
 
-const USAGE: &'static str = r#"Usage: minippy INPUT"#;
+const USAGE: &str = r#"Usage: minippy INPUT"#;
 
 fn main() {
     println!("{USAGE}");
@@ -32,15 +32,14 @@ fn main() {
         let orig_args: Vec<String> = std::env::args().collect();
         let filepath = orig_args.last().unwrap().to_string();
 
-        let mut args: Vec<String> = Vec::new();
-        args.extend(vec![
+        let args: Vec<String> = vec![
             "rustc".to_string(),
             filepath,
             "--sysroot".to_string(),
             sys_root,
             "--out-dir".to_string(),
             "./.minippy".to_string(),
-        ]);
+        ];
 
         rustc_driver::RunCompiler::new(&args, &mut MinippyCallBacks).run()
     }));
@@ -91,9 +90,9 @@ impl<'tcx> LateLintPass<'tcx> for AddZero {
             && (is_const_zero(lhs) || is_const_zero(rhs))
         {
             cx.struct_span_lint(ADD_ZERO, expr.span, |diag| {
-            let mut diag = diag.build("Uneffective operation");
-            diag.emit();
-        });
+                let mut diag = diag.build("Uneffective operation");
+                diag.emit();
+            });
         }
     }
 }
