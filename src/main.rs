@@ -90,7 +90,7 @@ impl<'tcx> LateLintPass<'tcx> for AddZero {
             && (is_const_zero(lhs) || is_const_zero(rhs))
         {
             cx.struct_span_lint(ADD_ZERO, expr.span, |diag| {
-                let mut diag = diag.build("Uneffective operation");
+                let mut diag = diag.build("Ineffective operation");
                 diag.emit();
             });
         }
