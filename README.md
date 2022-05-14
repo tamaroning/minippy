@@ -1,11 +1,11 @@
 # Minippy
 A tiny toy linter influenced by Clippy
 
-# Prerequisites
+## Prerequisites
 - Cargo
 - rustc private crates
 
-# Usage
+## Usage
 ```
 $ cargo run tests/add_zero.rs
 ```
