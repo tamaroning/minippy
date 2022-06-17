@@ -10,6 +10,9 @@ extern crate rustc_lint_defs;
 extern crate rustc_session;
 extern crate rustc_span;
 
+use hir::{BinOpKind, Expr, ExprKind};
+use rustc_ast::ast::LitKind;
+use rustc_hir as hir;
 use rustc_lint::{LateContext, LateLintPass, LintContext};
 use rustc_lint_defs::impl_lint_pass;
 use rustc_session::declare_tool_lint;
@@ -37,8 +40,6 @@ fn main() {
             filepath,
             "--sysroot".to_string(),
             sys_root,
-            "--out-dir".to_string(),
-            "./.minippy".to_string(),
         ];
 
         rustc_driver::RunCompiler::new(&args, &mut MinippyCallBacks).run()
@@ -53,23 +54,32 @@ impl rustc_driver::Callbacks for MinippyCallBacks {
             lint_store.register_late_pass(|| Box::new(AddZero));
         }));
     }
+
+    fn after_analysis<'tcx>(
+        &mut self,
+        _compiler: &rustc_interface::interface::Compiler,
+        _queries: &'tcx rustc_interface::Queries<'tcx>,
+    ) -> rustc_driver::Compilation {
+        rustc_driver::Compilation::Stop
+    }
 }
 
+// ここからadd zero lintの定義
+
+// おまじない
 declare_tool_lint! {
     pub crate::ADD_ZERO,
-    Warn,
-    "",
+    Warn, // lintのレベル
+    "", // lintの説明(今回は省略)
     report_in_external_macro: true
 }
 
 struct AddZero;
+// おまじない
 impl_lint_pass!(AddZero => [ADD_ZERO]);
 
-use hir::{BinOpKind, Expr, ExprKind};
-use rustc_ast::ast::LitKind;
-use rustc_hir as hir;
-
-fn is_const_zero(expr: &Expr) -> bool {
+// 式がリテラルの0かチェックする
+fn is_lit_zero(expr: &Expr) -> bool {
     if let ExprKind::Lit(lit) = &expr.kind
         && let LitKind::Int(0, ..) = lit.node
     {
@@ -81,14 +91,16 @@ fn is_const_zero(expr: &Expr) -> bool {
 
 impl<'tcx> LateLintPass<'tcx> for AddZero {
     fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
+        // マクロ展開されたコードはリントしない
         if expr.span.from_expansion() {
             return;
         }
-
+        // 二項演算かつ、左辺もしくは右辺がリテラルの0であるならば、
         if let ExprKind::Binary(binop, lhs, rhs) = expr.kind
             && BinOpKind::Add == binop.node
-            && (is_const_zero(lhs) || is_const_zero(rhs))
+            && (is_lit_zero(lhs) || is_lit_zero(rhs))
         {
+            // 警告を表示する
             cx.struct_span_lint(ADD_ZERO, expr.span, |diag| {
                 let mut diag = diag.build("Ineffective operation");
                 diag.emit();
