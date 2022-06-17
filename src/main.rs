@@ -52,6 +52,7 @@ impl rustc_driver::Callbacks for MinippyCallBacks {
     fn config(&mut self, config: &mut rustc_interface::Config) {
         config.register_lints = Some(Box::new(move |_sess, lint_store| {
             lint_store.register_late_pass(|| Box::new(AddZero));
+            lint_store.register_late_pass(|| Box::new(UnwrapUsed));
         }));
     }
 
@@ -103,6 +104,32 @@ impl<'tcx> LateLintPass<'tcx> for AddZero {
             // 警告を表示する
             cx.struct_span_lint(ADD_ZERO, expr.span, |diag| {
                 let mut diag = diag.build("Ineffective operation");
+                diag.emit();
+            });
+        }
+    }
+}
+
+// ここからunwrap used lintの定義
+
+// おまじない
+declare_tool_lint! {
+    pub crate::UNWRAP_USED,
+    Warn,
+    "",
+    report_in_external_macro: true
+}
+
+struct UnwrapUsed;
+impl_lint_pass!(UnwrapUsed => [UNWRAP_USED]);
+
+impl<'tcx> LateLintPass<'tcx> for UnwrapUsed {
+    fn check_expr(&mut self, cx: &LateContext<'tcx>, expr: &'tcx Expr<'tcx>) {
+        if let ExprKind::MethodCall(method_path, /* args */ _, /* span */_) = expr.kind
+            && method_path.ident.name == rustc_span::symbol::sym::unwrap
+        {
+            cx.struct_span_lint(ADD_ZERO, expr.span, |diag| {
+                let mut diag = diag.build("`unwrap` is used here");
                 diag.emit();
             });
         }
