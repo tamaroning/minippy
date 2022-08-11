@@ -51,7 +51,6 @@ struct MinippyCallBacks;
 impl rustc_driver::Callbacks for MinippyCallBacks {
     fn config(&mut self, config: &mut rustc_interface::Config) {
         config.register_lints = Some(Box::new(move |_sess, lint_store| {
-            // lintを登録する
             lint_store.register_late_pass(|| Box::new(AddZero));
         }));
     }
